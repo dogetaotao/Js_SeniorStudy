@@ -7,10 +7,12 @@
 <body>
 <script>
 
+  //创建一种防抖方式，让输出结果如下
   const Fn = () => {
     console.log(1)
   }
 
+  //传统防抖方法
   // const debounce = function (fn) {
   //   let timer = null
   //   const debounceFn = function () {
@@ -23,6 +25,7 @@
   //         fn.apply(this)
   //       }, 0)
   //     }).then(() => {
+  //借助Promise.then，把timer变化放入微队列，这样可以保证timer的变化在setTimeOut之前，同步任务之后执行
   //       timer = null
   //     })
   //   }
@@ -36,7 +39,7 @@
       running = true
       fn()
       queueMicrotask(() =>{
-        running = false
+        running = false //把
       })
     }
   }
@@ -44,14 +47,17 @@
 
   const G = debounce(Fn)
 
-  // function A() {
-  //   G()
-  //   G()
-  //   G()
-  // }
-  //
+
+  function A() {
+    G()
+    G()
+    G()
+  }
+
+  //输出1
   // A()
-  //
+
+  //输出 1 1
   setTimeout(G, 0)
   G()
 </script>
