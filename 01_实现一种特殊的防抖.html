@@ -12,7 +12,7 @@
     console.log(1)
   }
 
-  //传统防抖方法
+  //传统防抖方法+promise实现
   // const debounce = function (fn) {
   //   let timer = null
   //   const debounceFn = function () {
@@ -32,6 +32,7 @@
   //   return debounceFn
   // }
 
+  //不用promise实现
   const debounce = (fn) =>{
     let running = false
     return function (){
@@ -39,7 +40,7 @@
       running = true
       fn()
       queueMicrotask(() =>{
-        running = false //把
+        running = false //把running的更改放入微队列
       })
     }
   }
