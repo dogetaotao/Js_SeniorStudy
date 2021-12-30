@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<script>
+
+  const Fn = () => {
+    console.log(1)
+  }
+
+  // const debounce = function (fn) {
+  //   let timer = null
+  //   const debounceFn = function () {
+  //     if (timer) {
+  //       clearTimeout(timer)
+  //     }
+  //     new Promise((resolve) => {
+  //       resolve()
+  //       timer = setTimeout(() => {
+  //         fn.apply(this)
+  //       }, 0)
+  //     }).then(() => {
+  //       timer = null
+  //     })
+  //   }
+  //   return debounceFn
+  // }
+
+  const debounce = (fn) =>{
+    let running = false
+    return function (){
+      if(running){return}
+      running = true
+      fn()
+      queueMicrotask(() =>{
+        running = false
+      })
+    }
+  }
+
+
+  const G = debounce(Fn)
+
+  // function A() {
+  //   G()
+  //   G()
+  //   G()
+  // }
+  //
+  // A()
+  //
+  setTimeout(G, 0)
+  G()
+</script>
+</body>
+</html>
