@@ -25,7 +25,7 @@
   //         fn.apply(this)
   //       }, 0)
   //     }).then(() => {
-  //借助Promise.then，把timer变化放入微队列，这样可以保证timer的变化在setTimeOut之前，同步任务之后执行
+  // 借助Promise.then，把timer变化放入微队列，这样可以保证timer的变化在setTimeOut之前，同步任务之后执行
   //       timer = null
   //     })
   //   }
@@ -45,9 +45,7 @@
     }
   }
 
-
   const G = debounce(Fn)
-
 
   function A() {
     G()
@@ -61,6 +59,17 @@
   //输出 1 1
   setTimeout(G, 0)
   G()
+
+  // 1.执行全局Script代码
+  // 2.全局Script代码执行完毕后，调用栈Stack会清空
+  // 3.然后从微队列microtask queue中取出位于队首的回调任务，放入调用栈Stack中执行，执行完后microtask queue长度减1
+  // 4.如果在执行microtask的过程中，又产生了microtask,那么会加入到队列的末尾，也会在这个周期被调用执行
+  // 5.直到microtask queue中所有任务都执行完毕，此时microtask queue为空队列，调用栈Stack也为空
+  // 6.然后再取出宏队列macrotask queue中位于队首的任务，放入Stack中执行
+  // 7.执行完毕后，调用栈Stack为空
+  // 8.重复第3-7个步骤
+  // ......
+
 </script>
 </body>
 </html>
