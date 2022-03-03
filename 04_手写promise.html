@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<script>
+  (function (window) {
+    const PENDING = 'pending'
+    const RESOLVED = 'resolved'
+    const REJECTED = 'rejected'
+
+    function MyPromise(executor) {
+      const self = this//储存this
+      this.status = PENDING//初始化状态为pending
+      this.data = undefined//初始化结果数值为undefined
+      this.callback = []//每个元素的结构：{onResolved() {}, onRejected() {}}
+
+      function resolve(value) {
+        //只能更改一次状态
+        if (self.status !== PENDING) {
+          return
+        }
+        //状态改为resolved
+        self.status = RESOLVED
+        //储存value的数据
+        self.data = value
+        //如果有待执行的callback函数，立即异步执行回调函数
+        if (self.callback.length > 0) {
+          setTimeout(() => { // 放入队列中执行所有成功的回调
+            self.callback.forEach(callbackObj => {
+              callbackObj.onResolvedSave(value)
+            })
+          })
+        }
+      }
+
+      function reject(reason) {
+        //只能更改一次状态
+        if (self.status !== PENDING) {
+          return
+        }
+        //将状态更改为rejected
+        self.status = REJECTED
+        //保存数据
+        self.data = reason
+        //有待执行的callback回调立刻异步执行回调
+        if (self.callback.length > 0) {
+          setTimeout(() => {// 放入队列中执行所有失败的回调
+            self.callback.forEach(callbackObj => {
+              callbackObj.onRejectedSave(reason)
+            })
+          })
+        }
+      }
+
+      //立即同步执行executor
+      try {//如果执行器抛出异常，promise对象变为rejected
+        executor(resolve, reject)
+      } catch (error) {
+        reject(error)
+      }
+    }
+
+    MyPromise.prototype.then = function (onResolved, onRejected) {
+      onResolved = typeof onResolved === 'function' ? onResolved : value => value
+      onRejected = typeof onRejected === 'function' ? onRejected : reason => {
+        throw reason
+      }
+
+      const self = this
+      return new MyPromise((resolve, reject) =>{
+        function handle(callback){
+          try{
+            const result = callback(self.data)
+            if(result instanceof MyPromise){
+              result.then(resolve, reject)
+            } else{
+              resolve(result)
+            }
+          } catch (error){
+            throw error
+          }
+        }
+        if(self.status === PENDING){
+          self.callback.push({
+            onResolvedSave() {
+              handle(onResolved)
+            },
+            onRejectedSave() {
+              handle(onRejected)
+            }
+          })
+        } else if(self.status === RESOLVED){
+          setTimeout(() =>{
+            handle(onResolved)
+          })
+        }else{
+          setTimeout(() =>{
+            handle(onRejected)
+          })
+        }
+      })
+    }
+
+    MyPromise.prototype.catch = function (onRejected){
+      return this.then(undefined, onRejected)
+    }
+
+    MyPromise.resolve = function (value) {
+      return new MyPromise((resolve , reject) =>{
+        if(value instanceof MyPromise){
+          value.then(resolve, reject)
+        } else {
+          resolve(value)
+        }
+      })
+    }
+
+    MyPromise.reject = function (reason) {
+      return new MyPromise((resolve, reject) =>{
+        reject(reason)
+      })
+    }
+
+    MyPromise.all = function (myPromises) {
+      const values = new Array(myPromises.length)
+      let i = 0
+      return new MyPromise((resolve, reject)=>{
+        myPromises.forEach((p,index)=>{
+          MyPromise.resolve(p).then(
+            value =>{
+              i++
+              values[index] = value
+              if(i === myPromises.length){
+                resolve(values)
+              }
+            },
+            reason => {
+              reject(reason)
+            }
+          )
+        })
+      })
+    }
+
+    MyPromise.race = function (myPromises){
+      return new MyPromise((resolve, reject)=>{
+        myPromises.forEach((p)=>{
+          MyPromise.resolve(p).then(
+            value =>{
+              resolve(value)
+            },
+            reason =>{
+              reject(reason)
+            }
+          )
+        })
+      })
+    }
+
+    window.MyPromise = MyPromise
+  })(window)
+</script>
+</body>
+</html>
