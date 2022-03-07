@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<script>
+  (function (window){
+    const PENDING = 'pending'
+    const RESOLVED = 'resolved'
+    const REJECTED = 'rejected'
+
+    class MyPromise {
+      constructor(executor) {
+        const self = this
+        this.status = PENDING
+        this.data = undefined
+        this.callback = []
+
+        function resolve(value) {
+          if(self.status !== PENDING){
+            return
+          }
+          self.status = RESOLVED
+          self.data = value
+          if(self.callback.length){
+            setTimeout(() =>{
+              self.callback.forEach(callbackObj =>{
+                callbackObj.onResolvedSave(value)
+              })
+            })
+          }
+        }
+
+        function reject(reason) {
+          if(self.status !== PENDING){
+            return
+          }
+          self.status = REJECTED
+          self.data = reason
+          if(self.callback.length){
+            self.callback.forEach(callbackObj=>{
+              callbackObj.onRejectedSave(reason)
+            })
+          }
+
+        }
+      }
+    }
+
+
+  })()
+
+</script>
+</body>
+</html>

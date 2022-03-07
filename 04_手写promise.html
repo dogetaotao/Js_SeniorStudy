@@ -30,7 +30,7 @@
         if (self.callback.length > 0) {
           setTimeout(() => { // 放入队列中执行所有成功的回调
             self.callback.forEach(callbackObj => {
-              callbackObj.onResolvedSave(value)
+              callbackObj.onResolvedSave()
             })
           })
         }
@@ -49,7 +49,7 @@
         if (self.callback.length > 0) {
           setTimeout(() => {// 放入队列中执行所有失败的回调
             self.callback.forEach(callbackObj => {
-              callbackObj.onRejectedSave(reason)
+              callbackObj.onRejectedSave()
             })
           })
         }
@@ -63,28 +63,46 @@
       }
     }
 
+    /**
+     * 原型上的then方法，规定根据promise状态来执行的回调函数
+     */
     MyPromise.prototype.then = function (onResolved, onRejected) {
       onResolved = typeof onResolved === 'function' ? onResolved : value => value
+      //实现异常穿透，promise如果是rejected都直接抛出异常
       onRejected = typeof onRejected === 'function' ? onRejected : reason => {
         throw reason
       }
 
       const self = this
-      return new MyPromise((resolve, reject) =>{
-        function handle(callback){
-          try{
+      return new MyPromise((resolve, reject) => {
+        /**
+         * 1.如果执行抛出异常，return的promise会失败，失败的reason是error
+         * 2.如果回调函数返回值非promise，return的promise就会成功，value就是返回的值
+         * 3.如果回调函数返回的是promise，return的promise就是这个promise的结果
+         */
+        function handle(callback) {
+          try {
             const result = callback(self.data)
-            if(result instanceof MyPromise){
-              result.then(resolve, reject)
-            } else{
+            // 3.如果回调函数返回的是promise，return的promise就是这个promise的结果
+            if (result instanceof MyPromise) {
+              //简便写法： result.then(resolve, reject)
+              result.then(value => resolve(value)
+                , reason => reject(reason)
+              )
+            } else {
+              // 2.如果回调函数返回值非promise，return的promise就会成功，value就是返回的值
               resolve(result)
             }
-          } catch (error){
+          } catch (error) {
+            // 1.如果执行抛出异常，return的promise会失败，失败的reason是error
             throw error
           }
         }
-        if(self.status === PENDING){
+
+        if (self.status === PENDING) {
           self.callback.push({
+            //不能仅仅只放onResolved函数，因为onResolved的执行结果
+            // 会影响返回的promise的状态，需要用handle包装判断下
             onResolvedSave() {
               handle(onResolved)
             },
@@ -92,25 +110,36 @@
               handle(onRejected)
             }
           })
-        } else if(self.status === RESOLVED){
-          setTimeout(() =>{
+        } else if (self.status === RESOLVED) { //当前状态是resolved/rejected，执行回调（异步）
+          setTimeout(() => {
             handle(onResolved)
           })
-        }else{
-          setTimeout(() =>{
+        } else {
+          setTimeout(() => {
             handle(onRejected)
           })
         }
       })
     }
 
-    MyPromise.prototype.catch = function (onRejected){
+    /**
+     * promise原型上的catch方法，相当于不规定成功回调的then方法
+     */
+    MyPromise.prototype.catch = function (onRejected) {
       return this.then(undefined, onRejected)
     }
 
+    /**
+     *Promise.resolve(value)方法返回一个以给定值解析后的Promise 对象。
+     * 如果这个值是一个 promise ，那么将返回这个 promise ；
+     * 如果这个值是thenable（即带有"then" 方法），返回的promise会“跟随”这个thenable的对象，采用它的最终状态；
+     * 否则返回的promise将以此值完成。此函数将类promise对象的多层嵌套展平。
+     */
     MyPromise.resolve = function (value) {
-      return new MyPromise((resolve , reject) =>{
-        if(value instanceof MyPromise){
+      return new MyPromise((resolve, reject) => {
+        //如果传入的value是promise，直接返回此promise
+        if (value instanceof MyPromise) {
+          //相当于返回此promise
           value.then(resolve, reject)
         } else {
           resolve(value)
@@ -118,22 +147,28 @@
       })
     }
 
+    /**
+     * promise上的reject方法，返回一个失败的promise
+     */
     MyPromise.reject = function (reason) {
-      return new MyPromise((resolve, reject) =>{
+      return new MyPromise((resolve, reject) => {
         reject(reason)
       })
     }
 
+    /**
+     * promise.all方法
+     */
     MyPromise.all = function (myPromises) {
       const values = new Array(myPromises.length)
       let i = 0
-      return new MyPromise((resolve, reject)=>{
-        myPromises.forEach((p,index)=>{
+      return new MyPromise((resolve, reject) => {
+        myPromises.forEach((p, index) => {
           MyPromise.resolve(p).then(
-            value =>{
+            value => {
               i++
               values[index] = value
-              if(i === myPromises.length){
+              if (i === myPromises.length) {
                 resolve(values)
               }
             },
@@ -145,14 +180,17 @@
       })
     }
 
-    MyPromise.race = function (myPromises){
-      return new MyPromise((resolve, reject)=>{
-        myPromises.forEach((p)=>{
+    /**
+     *promise.race方法
+     */
+    MyPromise.race = function (myPromises) {
+      return new MyPromise((resolve, reject) => {
+        myPromises.forEach((p) => {
           MyPromise.resolve(p).then(
-            value =>{
+            value => {
               resolve(value)
             },
-            reason =>{
+            reason => {
               reject(reason)
             }
           )
